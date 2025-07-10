@@ -257,7 +257,8 @@ Prozesse #hinweis[(aktiv)] sind die _Verwaltungseinheit_ des OS für Programme #
 Jedem Prozess ist ein _virtueller Adressraum_ zugeordnet.\
 Ein Prozess umfasst das _Abbild eines Programms_ im Hauptspeicher #hinweis[(text section)],
 die _globalen Variablen des Programms_ #hinweis[(data section)],
-Speicher für den _Heap_ und Speicher für den _Stack_.\
+Speicher für den _Heap_ und Speicher für den _Stack_.
+Der Heap wird für _globale_ Variablen genutzt und der Stack für variablen die nur _während dem Funktionsaufruf_ existieren \
 *Process Control Block (PCB):*
 Das Betriebssystem hält Daten über jeden Prozess in jeweils einem _PCB_ vor. Speicher für
 alle Daten, die das OS benötigt, um die Ausführung des Prozesses ins Gesamtsystem zu
@@ -353,7 +354,7 @@ Besteht aus _Header_,
 #tcolor("orange", "Segmente") und #tcolor("grün", "Sektionen") sind eine andere Einteilung
 für die gleichen Speicherbereiche. View des #tcolor("orange", "Loaders") sind die
 #tcolor("orange", "Segmente"), view des #tcolor("grün", "Compilers") die #tcolor("grün", "Sektionen").
-Definieren "gleichartige" Daten. Der _Linker_ vermittelt zwischen beiden Views.
+Laden Daten in den Speicher und definieren "gleichartige" Daten. Der _Linker_ vermittelt zwischen beiden Views.
 
 *Header:*
 Beschreibt den _Aufbau_ der Datei: Typ, 32/64-bit, Encoding, Maschinenarchitektur,
@@ -395,15 +396,16 @@ _öffnet_ eine dynamische Bibliothek und gibt ein Handle darauf zurück.
 - _`RTLD_LOCAL`:_ Symbole werden nicht für andere Objektdateien verwendet\
 *```c void * dlsym (void * handle, char * name)```:*
 gibt die _Adresse des Symbols_ `name` aus der mit `handle` bezeichneten _Bibliothek_ zurück.
-Keine Typinformationen #hinweis[(Variabel? Funktion?)]
+Keine Typinformationen #hinweis[(Variabel? Funktion?)] \
+Wenn _name_ nicht gefunden werden kann, wird ein nullpointer zurückgegeben. Kann zu _undefined behaviour_ führen.
 
 ```c
 // type "func_t" is a address of a function with a int param and int return type
-typedef int (*func_t)(int);
-handle = dlopen("libmylib.so", RTLD_NOW); // open library
-func_t f = dlsym(handle, "my_function"); // write my_function addr. into a func_t
-int *i = dlsym(handle, "my_int"); // get address of "my_int"
-(*f)(*i); // call "my_function" with "my_int" as parameter
+typedef bool (*func_t)(bool);
+handle = dlopen("licoollib.so", RTLD_NOW); // open library
+func_t function = dlsym(handle, "myboolfunction"); // write myboolfunction addr. into a func_t
+bool *b = dlsym(handle, "mycoolbool"); // get address of "mycoolbool"
+(*function)(*b); // call "myboolfunction" with "mycoolbool" as parameter
 ```
 
 *```c int dlclose (void * handle)```:*
@@ -671,6 +673,19 @@ int main (int argc, char **argv) {
   _Übergänge_ von einem Status zum anderen werden _immer vom OS_ vorgenommen.
   Dieser Teil vom OS heisst _Scheduler_.
 ]
+*Arten von Threads:*
+_I/O-lastig_ #hinweis[(Wenig rechnen, viel I/O-Geräte-Kommunikation)],
+_Prozessor-lastig_ #hinweis[(Viel rechnen, wenig Kommunikation)]\
+*Arten der Nebenläufigkeit:*
+_Kooperativ_ #hinweis[(Threads entscheiden selbst über Abgabe des Prozessors)],
+_Präemptiv_ #hinweis[(Scheduler entscheidet, wann einem Thread der Prozessor entzogen wird)]\
+*Präemptives Multithreading:*
+Thread läuft, bis er auf etwas zu _warten_ beginnt, Prozessor _yielded_,
+ein _System-Timer-Interrupt_ auftritt oder ein _bevorzugter Thread_ erzeugt oder ready wird.\
+*Parallele, quasiparallele und nebenläufige Ausführung:*
+_Parallel_ #hinweis[(Tatsächliche Gleichzeitigkeit, $n$ Prozessoren für $n$ Threads)],
+_Quasiparallel_ #hinweis[($n$ Threads auf $<n$ Prozessoren abwechselnd)],
+_Nebenläufig_ #hinweis[(Überbegriff für parallel oder quasiparallel)]
 #wrap-content(
   image("img/bsys_28.png"),
   align: top + right,
@@ -686,19 +701,6 @@ int main (int argc, char **argv) {
   Wenn kein Thread _laufbereit_ ist, schaltet das OS den Prozessor in _Standby_ und wird
   durch _Interrupt_ wieder geweckt.
 ]
-*Arten von Threads:*
-_I/O-lastig_ #hinweis[(Wenig rechnen, viel I/O-Geräte-Kommunikation)],
-_Prozessor-lastig_ #hinweis[(Viel rechnen, wenig Kommunikation)]\
-*Arten der Nebenläufigkeit:*
-_Kooperativ_ #hinweis[(Threads entscheiden selbst über Abgabe des Prozessors)],
-_Präemptiv_ #hinweis[(Scheduler entscheidet, wann einem Thread der Prozessor entzogen wird)]\
-*Präemptives Multithreading:*
-Thread läuft, bis er auf etwas zu _warten_ beginnt, Prozessor _yielded_,
-ein _System-Timer-Interrupt_ auftritt oder ein _bevorzugter Thread_ erzeugt oder ready wird.\
-*Parallele, quasiparallele und nebenläufige Ausführung:*
-_Parallel_ #hinweis[(Tatsächliche Gleichzeitigkeit, $n$ Prozessoren für $n$ Threads)],
-_Quasiparallel_ #hinweis[($n$ Threads auf $<n$ Prozessoren abwechselnd)],
-_Nebenläufig_ #hinweis[(Überbegriff für parallel oder quasiparallel)]
 
 #wrap-content(
   image("img/bsys_29.png"),
@@ -1166,7 +1168,6 @@ gemacht. In $P_1$ wird Page $V_1$ auf einen Frame $F$ abgebildet. In $P_2$ wird 
 auf _denselben_ Frame $F$ abgebildet. Beide Prozesse können _beliebig_ auf dieselben Daten
 zugreifen. Im Shared Memory müssen _relative Adressen_ verwendet werden.
 
-#colbreak()
 
 === POSIX API
 Das OS benötigt eine "Datei" _$bold(S)$_, das Informationen über den gemeinsamen Speicher
@@ -1242,6 +1243,7 @@ Einheit, um Zeichen in einem Encoding darzustellen #hinweis[(bietet den Speicher
 #hinweis[_$bold(P_i) =$_ $i$-tes Bit des unkodierten CPs,
   _$bold(U_i) =$_ $i$-tes Code-Unit des kodierten CPs,
   _$bold(B_i) =$_ $i$-tes Byte des kodierten CPs]
+UTF baut auf ASCII auf und ist ein superset davon.
 
 == UTF-32
 Jede CU umfasst _32 Bit_, jeder CP kann mit _einer CU_ dargestellt werden. Direkte Kopie der
@@ -1482,7 +1484,7 @@ $#hex("1400").#hex("0") arrow.bar #hex("200C"), quad
 _Extent Trees_\
 *Header:* $0 arrow.bar (1,0)$\
 *Extent:* $1 arrow.bar (0, #fxcolor("grün", hex("2000")), #fxcolor("rot",hex("400")))$
-
+#image("img/extent_tree_overview.png")
 == Journaling
 Wenn Dateisystem beim _Erweitern_ einer Datei _unterbrochen_ wird, kann es zu
 _Inkonsistenzen_ kommen. _Journaling_ verringert Zeit für Überprüfung von Inkonsistenzen erheblich.\
@@ -1499,89 +1501,6 @@ Transaktionen im Journal werden nach Neustart noch einmal ausgeführt.\
 _(Full) Journal_ #hinweis[(Metadaten und Datei-Inhalte ins Journal, sehr sicher aber langsam)],
 _Ordered_ #hinweis[(Nur Metadaten ins Journal, Dateiinhalte werden immer vor Commit geschrieben)],
 _Writeback_ #hinweis[(Nur Metadaten ins Journal, beliebige Reihenfolge, nicht sehr sicher aber schnell).]
-
-= X Window System
-Setzt _Grundfunktionen der Fensterdarstellung_. Ist austauschbar, realisiert Netzwerktransparenz.
-Plattformunabhängig, legt die GUI-Gestaltung nicht fest.\
-*Programmgesteuerte Interaktion:* Benutzer reagiert auf Programm.\
-*Ereignisgesteuerte Interaktion:* Programm reagiert auf Benutzer.\
-*Fenster:*
-Rechteckiger Bereich des Bildschirms. Es gibt eine Baumstruktur aller Fenster,
-der Bildschirm ist die Wurzel #hinweis[(z.B. Dialogbox, Scrollbar, Button...)].\
-*Display:* Rechner mit Tastatur, Zeigegerät und $1..m$ Bildschirme\
-*X Client:* Applikation, die einen Display nutzen will. Kann lokal oder entfernt laufen.\
-*X Server:* Softwareteil des X Window System, der ein Display ansteuert. Beim Nutzer.
-
-== GUI Architektur
-Nicht nur X Window System, sondern auch _Window Manager_ #hinweis[(Verwaltung der sichtbaren
-Fenster, Umrandung, Knöpfe. Läuft im Client und realisiert Window Layout Policy)] und
-_Desktop Manager_ #hinweis[(Desktop-Hilfsmittel wie Taskleiste, Dateimanager, Papierkorb etc.)].\
-
-== Xlib
-Ist das _C Interface_ für das X Protocol. Wird meist nicht direkt verwendet.\
-*Funktionen:*
-```c XOpenDisplay()``` #hinweis[öffnet Verbindung zum Display,
-NULL = Wert von `DISPLAY` Umgebungsvariabel)],
-```c XCloseDisplay()``` #hinweis[schliesst Verbindung],
-```c XCreateSimpleWindow()``` #hinweis[erzeugt ein Fenster],
-```c XDestroyWindow()``` #hinweis[entfernt ein Fenster & Unterfenster],
-```c XMapWindow()``` #hinweis[bestimmt, dass ein Fenster angezeigt werden soll (unhide)],
-```c XMapRaised()``` #hinweis[bringt Fenster in den Vordergrund],
-```c XMapSubwindows()``` #hinweis[zeigt alle Unterfenster an, `Expose` Event],
-```c XUnmapWindow()``` #hinweis[versteckt Fenster],
-```c XUnmapSubwindows()``` #hinweis[versteckt Unterfenster, `UnmapNotify` Event]
-
-*X Protocol:*
-Legt die _Formate für Nachrichten_ zwischen X Client und Server fest.
-_Requests_ #hinweis[(Dienstanforderungen, Client #sym.arrow Server)],
-_Replies_ #hinweis[( Antworten auf Requests, Client #sym.arrow.l Server)],
-_Events_ #hinweis[(Ereignismeldungen, Client #sym.arrow.l Server)],
-_Errors_ #hinweis[(Fehlermeldungen auf vorangegangene Requests, Client #sym.arrow.l Server)]\
-*Request Buffer:*
-Nachrichtenpufferung auf der Client Seite. Für _Effizienz_.\
-*Pufferung bei Ereignissen:*
-Werden beim X Server und beim Client gepuffert.
-_Server-Seitig_ berücksichtigt Netzwerkverfügbarkeit, _Client-Seitige_ hält Events bereit.\
-*X Event Handling:*
-Ereignisse werden vom Client verarbeitet oder weitergeleitet.
-Muss _festlegen, welche_ Typen er empfangen will.
-```c XSelectInput()``` #hinweis[legt fest, welche Events via Event-Masken emfpangen werden,
-z.B. `ExposureMask`],
-```c XNextEvent()``` #hinweis[kopiert den nächsten Event aus dem Buffer].
-
-== Zeichnen
-*Ressourcen:*
-Server-seitige Datenhaltung zur Reduktion des Netzwerkverkehrs.
-Halten Informationen im Auftrag von Clients. Diese identifizieren Informationen mit IDs.
-Kein Hin- und Herkopieren komplexer Datenstrukturen nötig.
-#hinweis[(z.B. Window, Pixmap, Colormap, Font, Graphics-Context)]\
-*Pufferung verdeckter Fensterinhalte:*
-_Minimal_ #hinweis[(keine Pufferung)] oder
-_Optional_ #hinweis[(Hintergrundspeicher zum Sichern vorhanden)]\
-*Pixmap:*
-Server-Seitiger _Grafikspeicher_, wird immer gecached.\
-*X Grafikfunktionen:*
-Bilddarstellung mittels _Rastergrafik_ und _Farbtabelle_. Erlauben das Zeichnen von Figuren,
-Strings und Texten. _Ziele_ für das Zeichnen können Fenster oder Pixmap sein.\
-*Graphics Context:*
-Legt diverse _Eigenschaften_ fest, die Systemaufrufe nicht direkt unterstützen
-#hinweis[(z.B. Liniendicke, Farben, Füllmuster)].
-Client kann mehrere GCs gleichzeitig nutzen.
-
-== Fenster Schliessen
-Schaltfläche wird vom _Window Manager_ erzeugt. X weiss _nichts_ über spezielle Bedeutung
-der Schaltfläche, der Window Manager schliesst das Fenster. Es gibt ein _Protokoll_ zwischen
-Window Manager und Applikation. `ClientMessage` Event mit `WM_DELETE_MESSAGE`.\
-*Atoms:*
-_ID eines Strings_, der für _Meta-Zwecke_ benötigt wird. Erspart Parsen der Strings.\
-*Properties:*
-Werden mit jedem Fenster assoziiert.
-_Generischer Kommunikations-Mechanismus_ zwischen Applikation und Window Manager.\
-*`WM_PROTOCOLS`:*
-Von X Standard definierte Anzahl an Protokollen, die der Window Manager verstehen soll.
-Ein Client kann sich für Protokolle _registrieren_. \
-*`WM_DELETE_WINDOW`:*
-Wird beim Drücken des "x" vom Window Manager an den Client geschickt.
 
 = Meltdown
 Meltdown ist eine _HW-Sicherheitslücke_, die es ermöglicht, den _gesamten physischen
@@ -1618,3 +1537,5 @@ Prozessor laufen, verwenden die _selben Vorhersagen_. Ein Angreifer kann damit d
 Predictor _für einen anderen Prozess "trainieren"_. Der _Opfer-Prozess_ muss zur Kooperation
 _"gezwungen"_ werden, indem im verworfenen Branch auf Speicher zugegriffen wird.
 Nicht leicht zu fassen, aber auch nicht leicht zu implementieren.
+
+#image("img/ext2.png")
